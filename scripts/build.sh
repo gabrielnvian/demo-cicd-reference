@@ -6,4 +6,4 @@ cd "$(dirname "$0")/../app"
 echo "Building TypeScript..."
 npm ci
 npm run build
-echo "Build complete — output in app/dist/"
+echo "Build complete - output in app/dist/"
