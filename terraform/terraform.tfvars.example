@@ -1,0 +1,14 @@
+# Copy this to terraform.tfvars (gitignored) and fill in values.
+# Never commit terraform.tfvars — it may contain account-specific details.
+
+aws_region    = "us-east-1"
+project       = "hello-app"
+environment   = "staging"
+vpc_cidr      = "10.0.0.0/16"
+app_port      = 3000
+desired_count = 1
+cpu           = 256
+memory        = 512
+
+# Set by CI/CD — override on command line: -var="app_image=..."
+# app_image = "123456789.dkr.ecr.us-east-1.amazonaws.com/hello-app:latest"

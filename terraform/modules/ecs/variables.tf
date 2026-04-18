@@ -1,0 +1,12 @@
+variable "name_prefix"    { type = string }
+variable "project"        { type = string }
+variable "environment"    { type = string }
+variable "vpc_id"         { type = string }
+variable "public_subnets" { type = list(string) }
+variable "app_port"       { type = number }
+variable "app_image"      { type = string }
+variable "desired_count"  { type = number }
+variable "cpu"            { type = number }
+variable "memory"         { type = number }
+variable "log_group_name" { type = string }
+variable "aws_region"     { type = string }
