@@ -40,8 +40,8 @@ jobs:
     name: Build & Push Image
     needs: test
     runs-on: ubuntu-latest
-    # Only push when merging to main or tagging a release
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    # Only build and push on tag releases
+    if: startsWith(github.ref, 'refs/tags/v')
 
     permissions:
       id-token: write   # for OIDC

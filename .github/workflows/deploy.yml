@@ -1,10 +1,7 @@
 name: Deploy
 
 on:
-  # Auto-deploy staging on every push to main
-  push:
-    branches: [main]
-  # Manual prod deploy - must pass a version tag
+  # Manual deploy only; runs after secrets are configured
   workflow_dispatch:
     inputs:
       environment:
