@@ -24,5 +24,10 @@
     "ts-jest": "^29.1.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": ["<rootDir>/src/**/*.test.ts"]
   }
 }
