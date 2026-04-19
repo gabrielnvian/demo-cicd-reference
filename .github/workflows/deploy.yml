@@ -1,93 +1,93 @@
 name: Deploy
 
 on:
- # Auto-deploy staging on every push to main
- push:
- branches: [main]
- # Manual prod deploy - must pass a version tag
- workflow_dispatch:
- inputs:
- environment:
- description: "Target environment"
- required: true
- default: staging
- type: choice
- options: [staging, prod]
- image_tag:
- description: "Image tag to deploy (e.g. v1.2.3 or sha-abc1234)"
- required: true
+  # Auto-deploy staging on every push to main
+  push:
+    branches: [main]
+  # Manual prod deploy - must pass a version tag
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: staging
+        type: choice
+        options: [staging, prod]
+      image_tag:
+        description: "Image tag to deploy (e.g. v1.2.3 or sha-abc1234)"
+        required: true
 
 env:
- AWS_REGION: us-east-1
- ECR_REPOSITORY: hello-app
- TF_VERSION: "1.8.0"
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: hello-app
+  TF_VERSION: "1.8.0"
 
 jobs:
- deploy:
- name: Deploy to ${{ inputs.environment || 'staging' }}
- runs-on: ubuntu-latest
- environment: ${{ inputs.environment || 'staging' }}
+  deploy:
+    name: Deploy to ${{ inputs.environment || 'staging' }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'staging' }}
 
- permissions:
- id-token: write
- contents: read
+    permissions:
+      id-token: write
+      contents: read
 
- env:
- TF_ENV: ${{ inputs.environment || 'staging' }}
- IMAGE_TAG: ${{ inputs.image_tag || format('sha-{0}', github.sha) }}
+    env:
+      TF_ENV: ${{ inputs.environment || 'staging' }}
+      IMAGE_TAG: ${{ inputs.image_tag || format('sha-{0}', github.sha) }}
 
- steps:
- - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
- - name: Configure AWS credentials (OIDC)
- uses: aws-actions/configure-aws-credentials@v4
- with:
- role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
- aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
- - name: Set image URI
- id: image
- run: |
- IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
- echo "uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+      - name: Set image URI
+        id: image
+        run: |
+          IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          echo "uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
- - name: Setup Terraform
- uses: hashicorp/setup-terraform@v3
- with:
- terraform_version: ${{ env.TF_VERSION }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
 
- - name: Terraform Init
- working-directory: terraform
- run: terraform init
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
 
- - name: Terraform Plan
- working-directory: terraform
- run: |
- terraform plan \
- -var="environment=${TF_ENV}" \
- -var="app_image=${{ steps.image.outputs.uri }}" \
- -out=tfplan
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |
+          terraform plan \
+            -var="environment=${TF_ENV}" \
+            -var="app_image=${{ steps.image.outputs.uri }}" \
+            -out=tfplan
 
- - name: Terraform Apply
- working-directory: terraform
- run: terraform apply -auto-approve tfplan
+      - name: Terraform Apply
+        working-directory: terraform
+        run: terraform apply -auto-approve tfplan
 
- - name: Force ECS redeployment
- run: |
- CLUSTER="${{ env.ECR_REPOSITORY }}-${TF_ENV}-cluster"
- SERVICE="${{ env.ECR_REPOSITORY }}-${TF_ENV}-service"
- aws ecs update-service \
- --cluster "${CLUSTER}" \
- --service "${SERVICE}" \
- --force-new-deployment \
- --region "${AWS_REGION}"
+      - name: Force ECS redeployment
+        run: |
+          CLUSTER="${{ env.ECR_REPOSITORY }}-${TF_ENV}-cluster"
+          SERVICE="${{ env.ECR_REPOSITORY }}-${TF_ENV}-service"
+          aws ecs update-service \
+            --cluster "${CLUSTER}" \
+            --service "${SERVICE}" \
+            --force-new-deployment \
+            --region "${AWS_REGION}"
 
- - name: Wait for stable deployment
- run: |
- CLUSTER="${{ env.ECR_REPOSITORY }}-${TF_ENV}-cluster"
- SERVICE="${{ env.ECR_REPOSITORY }}-${TF_ENV}-service"
- aws ecs wait services-stable \
- --cluster "${CLUSTER}" \
- --services "${SERVICE}" \
- --region "${AWS_REGION}"
- echo "Deployment stable."
+      - name: Wait for stable deployment
+        run: |
+          CLUSTER="${{ env.ECR_REPOSITORY }}-${TF_ENV}-cluster"
+          SERVICE="${{ env.ECR_REPOSITORY }}-${TF_ENV}-service"
+          aws ecs wait services-stable \
+            --cluster "${CLUSTER}" \
+            --services "${SERVICE}" \
+            --region "${AWS_REGION}"
+          echo "Deployment stable."
