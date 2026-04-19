@@ -59,8 +59,8 @@ graph TD
 │ └── cloudwatch/ # Log group + CPU/memory alarms
 ├── .github/
 │ └── workflows/
-│ ├── ci.yml # Lint → test → build → push image (on push/PR)
-│ └── deploy.yml # Terraform apply → force ECS redeploy (on main/tag)
+│ ├── ci.yml # Lint + test on push/PR; build + push image on v* tags
+│ └── deploy.yml # Terraform apply + force ECS redeploy (workflow_dispatch)
 ├── scripts/
 │ ├── dev.sh # Run app locally with ts-node
 │ ├── build.sh # Compile TypeScript
@@ -74,15 +74,16 @@ graph TD
 
 ## CI/CD pipeline flow
 
-### On every push / pull request
-1. **`ci.yml`** - lint + test the app
-2. **If pushing to `main` or tagging** - build Docker image and push to ECR
+This repo uses a split trigger model so the default branch stays green without
+requiring live AWS credentials in the reference setup:
 
-### On merge to `main`
-3. **`deploy.yml`** - auto-deploy to **staging**:
- - `terraform plan` + `terraform apply`
- - `aws ecs update-service --force-new-deployment`
- - Wait for service stability
+- **`ci.yml`** runs lint and test on every push and pull request.
+- **`ci.yml` build-and-push** job runs only on `v*` tag pushes (e.g. `v1.2.3`),
+  which is when a release image gets published to ECR.
+- **`deploy.yml`** is `workflow_dispatch` only. Operators trigger it manually
+  from the GitHub Actions UI, choosing `staging` or `prod` and an image tag.
+- Deploy requires these repo secrets: `AWS_DEPLOY_ROLE_ARN` and `AWS_ACCOUNT_ID`.
+  Configure them before the first deploy; see step 3 below.
 
 ### Production deploys
 - Trigger `deploy.yml` manually via GitHub Actions UI
